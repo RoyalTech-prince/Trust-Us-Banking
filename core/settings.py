@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- 2. SECURITY ---
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-wwu+#v0r1jyidt2h(9(^^*b9l3io-wtltox-p&%o=8ho2bq37q')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = ['.render.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['trust-us-banking.onrender.com','.render.com', 'localhost', '127.0.0.1']
 
 # --- 3. APPLICATION DEFINITION ---
 INSTALLED_APPS = [
