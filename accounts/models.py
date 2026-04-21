@@ -24,7 +24,7 @@ class BankUser(AbstractUser):
 class Account(models.Model):
     account_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     owner      = models.OneToOneField(BankUser, on_delete=models.CASCADE, related_name='account')
-    balance    = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    balance    = models.DecimalField(max_digits=12, decimal_places=2, default=500.00)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

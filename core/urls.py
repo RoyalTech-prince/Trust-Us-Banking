@@ -1,8 +1,14 @@
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+#Home message function for the home url
+def home_welcome(request):
+    return JsonResponse({"message": "Welcome to the Trust Us Banking API!", "status": "Running", "documentation": "api/schema/swaggrui"})
+
 urlpatterns = [
+    path('', home_welcome, name='home'),
     path('admin/',    admin.site.urls),
     path('api/',      include('accounts.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
