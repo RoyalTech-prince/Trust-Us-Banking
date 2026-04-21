@@ -6,3 +6,5 @@ db.sqlite3
 media/
 staticfiles/
 .env
+Bank_transactions/
+venv/
