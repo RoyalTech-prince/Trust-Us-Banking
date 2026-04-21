@@ -1,30 +1,35 @@
 from rest_framework import serializers
-from .models import BankUser
+from .models import BankUser, Account
 
-class UserSerializer(serializers.ModelSerializer):
+
+class AccountSerializer(serializers.ModelSerializer):
     class Meta:
-        model = BankUser
-        fields = ['id', 'username', 'password', 'balance', 'face_encoding_sample']
-        extra_kwargs = {
-            'password': {'write_only': True}
-        }
+        model  = Account
+        fields = ['account_id', 'balance', 'created_at']
+
+
+class BankUserSerializer(serializers.ModelSerializer):
+    account   = AccountSerializer(read_only=True)
+    password  = serializers.CharField(write_only=True)
+
+    class Meta:
+        model  = BankUser
+        fields = ['id', 'user_id', 'username', 'email', 'phone', 'user_type', 'password', 'account']
+        read_only_fields = ['user_id', 'user_type']
 
     def create(self, validated_data):
-        # We use create_user so the password gets hashed properly
-        return BankUser.objects.create_user(**validated_data)
+        password = validated_data.pop('password')
+        user = BankUser(**validated_data)
+        user.set_password(password)
+        user.user_type = BankUser.UserType.CUSTOMER  # hardcoded for now
+        user.save()
+        return user
 
-class CreateUserSerializer(serializers.Serializer):
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(required=True, style={'input_type': 'password'})
-    balance = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, default=0.00)
-    # Use FileField + label to force the "Choose File" button in Swagger
-    face_encoding_sample = serializers.FileField(
-        required=False, 
-        label="Upload Face Image"
-    )
-    
-class LoginRequestSerializer(serializers.Serializer):
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(required=False, allow_blank=True)
-    # This triggers the 'Choose File' button for the login attempt
-    face_image = serializers.FileField(required=False, label="Login Face Photo")
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance
