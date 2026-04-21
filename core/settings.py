@@ -84,6 +84,14 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'Trust-Us-Banking API',
     'DESCRIPTION': 'Banking transactions system',
     'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SERVERS': [
+        {'url': 'https://trust-us-banking.onrender.com', 'description': 'Render server'},
+        {'url': 'http://localhost:8000', 'description': 'Local host server'},
+    ],
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+#Accept the headers sent by render.com for secure requests
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
