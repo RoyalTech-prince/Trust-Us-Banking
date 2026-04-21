@@ -86,6 +86,8 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'Trust-Us-Banking API',
     'DESCRIPTION': 'Banking transactions system',
     'VERSION': '1.0.0',
+    'CACHE_AUTH': True,
+    'PREPROCESSING_HOOKS': [],
     'SERVE_INCLUDE_SCHEMA': False,
     'SERVERS': [
         {'url': 'https://trust-us-banking.onrender.com', 'description': 'Render server'},
