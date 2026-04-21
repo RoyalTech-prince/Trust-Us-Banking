@@ -99,4 +99,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 #Accept the headers sent by render.com for secure requests
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-CORS_ALLOWED_ORIGINS = True
+CORS_ALLOWED_ORIGINS = ["http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "https://trust-us-banking.onrender.com",]
