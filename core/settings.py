@@ -4,9 +4,10 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-wwu+#v0r1jyidt2h(9(^^*b9l3io-wtltox-p&%o=8ho2bq37q')
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+
+# Updated to include Render and local dev
 ALLOWED_HOSTS = ['trust-us-banking.onrender.com', '.render.com', 'localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
@@ -53,15 +54,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
+# Neon PostgreSQL Configuration
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgresql://Trust-Us-Banking%20management:npg_cln1UEiPQh3B@ep-jolly-poetry-anfmoh43.c-6.us-east-1.aws.neon.tech/Trust-Us?sslmode=require&channel_binding=require',
+        default='postgresql://Trust-Us-Banking%20management:npg_cln1UEiPQh3B@ep-jolly-poetry-anfmoh43.c-6.us-east-1.aws.neon.tech/Trust-Us?sslmode=require',
         conn_max_age=600,
         conn_health_checks=True,
     )
 }
 
-AUTH_USER_MODEL = 'accounts.BankUser'
+# --- CRITICAL CHANGE ---
+# We revert to default Auth because BankUser is now a custom Universal Identity table, 
+# not a standard Django AbstractUser. This fixes the REQUIRED_FIELDS error.
+# -----------------------
+# AUTH_USER_MODEL = 'accounts.BankUser' # REMOVED
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -83,12 +89,11 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
+# Updated for Royal Tech Multi-Bank branding
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Trust-Us-Banking API',
-    'DESCRIPTION': 'Banking transactions system',
+    'TITLE': 'Royal Tech Multi-Bank API',
+    'DESCRIPTION': 'Universal Identity Banking System with Inter-Bank Transactions',
     'VERSION': '1.0.0',
-    'CACHE_AUTH': True,
-    'PREPROCESSING_HOOKS': [],
     'SERVE_INCLUDE_SCHEMA': False,
     'SERVERS': [
         {'url': 'https://trust-us-banking.onrender.com', 'description': 'Render server'},
@@ -98,8 +103,18 @@ SPECTACULAR_SETTINGS = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-#Accept the headers sent by render.com for secure requests
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-CORS_ALLOWED_ORIGINS = ["http://localhost:8000",
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
     "http://127.0.0.1:8000",
-    "https://trust-us-banking.onrender.com",]
+    "https://trust-us-banking.onrender.com",
+]
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'ketu.kedju@facsciences-uy1.cm' 
+EMAIL_HOST_PASSWORD = 'mmoe zxgm zhwo klst'
+DEFAULT_FROM_EMAIL = f"Trust-Us Banking <{EMAIL_HOST_USER}>"
