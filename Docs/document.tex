@@ -1,0 +1,127 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english,french]{babel} % Support des termes bilingues comme 'Cahier des Charges'
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+% Section formatting styles
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}[{\titlerule[0.8pt]}]
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+
+\begin{document}
+	
+	% --- PAGE DE TITRE ---
+	\begin{titlepage}
+		\centering
+		\vspace*{2cm}
+		{\Huge\bfseries Moteur Central Trust-Us-Banking}\\[0.5cm]
+		{\Large\bfseries Document D'explication Techniques}\\[0.2cm]
+		{\large \textit{Schéma Fonctionnel du Cahier des Charges}}\\[2cm]
+		
+		\begin{minipage}{0.6\textwidth}
+			\centering
+			\textit{Travail Pratique d'INF352}\\
+		\end{minipage}\\[3cm]
+		
+	\end{titlepage}
+	
+	\newpage
+	
+	% --- SECTION 1 ---
+	\section{Présentation du Projet \& Architecture Générale}
+	Le système central \textbf{Trust-Us-Banking} est un réseau de compensation centralisé décentralisé, piloté par API, conçu pour relier les nœuds bancaires commerciaux traditionnels (par exemple, UBC, AFB, ECO) avec des portefeuilles de monnaie mobile numérique locaux (représentant les frameworks MoMo ou Orange Money).
+	
+	L'architecture du système se concentre sur l'extraction du contrôle d'identité hors des limites physiques des agences. Un profil global unique gère simultanément des actifs multi-registres, garantissant un suivi précis des données, un traitement rapide de la logique transactionnelle et des mécanismes de vérification localisés.
+	
+	% --- SECTION 2 ---
+	\section{Contrôle d'Accès Basé sur les Rôles (RBAC)}
+	Le système impose une division stricte des paramètres d'accès en fonction de deux profils d'utilisateurs principaux :
+	\begin{itemize}
+		\item \textbf{Administrateur Bancaire (ADMIN) :} Dispose d'une visibilité complète du système, de droits de contournement pour la gestion des données, et de l'autorité exclusive pour restaurer les profils clients restreints vers des états opérationnels fonctionnels.
+		\item \textbf{Client Utilisateur (CUSTOMER) :} Limité à la vue de ses actifs spécifiques, aux interactions avec son portefeuille personnel, aux paramètres de son espace de sécurité et aux outils de gestion des transferts sortants.
+	\end{itemize}
+	
+	\subsection{Matrice des Permissions du Système}
+	Le schéma de gestion du cycle de vie des données utilise la carte de configuration des permissions suivante :
+	
+	\begin{table}[h!]
+		\centering
+		\caption{Limites d'Autorisation CRUD du Système}
+		\vspace{0.2cm}
+		\begin{tabular}{lcccc}
+			\toprule
+			\textbf{Cible du Module} & \textbf{Créer (POST)} & \textbf{Lire (GET)} & \textbf{Mettre à jour (PUT)} & \textbf{Supprimer (DELETE)} \\
+			\midrule
+			Matrice des Banques & Admin Uniquement & Authentifié & Admin Uniquement & Admin Uniquement \\
+			Registre Utilisateurs & Inscription Ouverte & Admin / Soi-même & Admin / Soi-même & Admin Uniquement \\
+			Comptes de Registre & Déclenchement Auto & Admin / Soi-même & Admin Uniquement & Admin Uniquement \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\newpage
+	
+	% --- SECTION 3 ---
+	\section{Fonctionnalités Détaillées du Système}
+	
+	\subsection{Module 1 : Gestion des Banques \& des Profils (Schéma CRUD)}
+	\begin{description}
+		\item[Fonctionnalité 1 : Gestion des Banques (CRUD)] ~\\
+		Fournit les mécanismes de contrôle centralisés requis pour gérer les banques commerciales au sein du système. Les administrateurs peuvent enregistrer de nouvelles entités à l'aide de paramètres uniques (par exemple, Nom : « United Bank of Cameroon », Code : « UBC »), mettre à jour les détails des agences, afficher les chemins actifs ou supprimer complètement un nœud inactif.
+		
+		\item[Fonctionnalité 2 : Inscription Globale \& Automatisation du Matricule] ~\\
+		Collecte le Nom, l'E-mail, le Numéro de Téléphone, le Mot de Passe, le Type d'Utilisateur et le Code Banque cible initial d'un utilisateur. Lors du traitement, le backend génère automatiquement un identifiant unique de séquence de suivi (\textbf{Matricule}), provisionne un profil maître global, configure leur premier compte chèque et envoie un e-mail de bienvenue à l'utilisateur(chaque fois qu'un utilisateur cree un nouveau compte bancaire).
+		
+		\item[Fonctionnalité 3 : Inscription Multi-Banque d'un Utilisateur Existant] ~\\
+		Permet à un utilisateur existant d'ouvrir instantanément des comptes bancaires secondaires à travers différents nœuds bancaires. Le client a seulement besoin de fournir son Matricule existant et le nouveau Code Banque ; le système verifie son profil et configure le nouveau compte sans modifier son portefeuille mobile sous-jacent.
+	\end{description}
+	
+	\subsection{Module 2 : Infrastructure du Portefeuille Numérique}
+	\begin{description}
+		\item[Fonctionnalité 4 : Provisionnement Automatique du Portefeuille \& Bonus de Bienvenue] ~\\
+		S'exécute automatiquement en arrière-plan immédiatement après la fin de l'inscription globale. Il crée un \textbf{Compte de Portefeuille Local} dédié lié au Matricule de l'utilisateur, associe son numéro de téléphone mobile physique comme identifiant de compte recherchable, et le précharge avec un solde initial de référence de \textbf{100 000 FCFA}.
+	\end{description}
+	
+	\subsection{Module 3 : Sécurité, Sessions \& Passerelles}
+	\begin{description}
+		\item[Fonctionnalité 5 : Connexions avec Préfixe Bancaire \& Routage de l'Espace de Travail] ~\\
+		Pour accéder à l'application, les utilisateurs saisissent leur Matricule et un mot de passe précédé d'un code banque cible valide (par exemple, \texttt{UBC\_monMotDePasse123}). Le moteur sépare ce préfixe, vérifie les identifiants et ouvre immédiatement le tableau de bord de cet espace de travail bancaire spécifique pour la session utilisateur.
+		
+		\item[Fonctionnalité 6 : Contrainte de Verrouillage après 3 Tentatives \& Réinitialisation Administrative] ~\\
+		Suit les tentatives de connexion infructueuses consécutives sur un profil de compte. À la 3ème tentative infructueuse consécutive, l'état du profil bascule sur \texttt{BLOCKED}, rejetant toute tentative ultérieure. Le compte reste verrouillé jusqu'à ce qu'un administrateur bancaire exécute une routine de réinitialisation, remettant les compteurs à zéro vers un état actif \texttt{LOGOUT}.
+		
+		\item[Fonctionnalité 7 : Déconnexion Automatique après 30 Minutes d'Inactivité] ~\\
+		Un compte à rebours en arrière-plan démarre lors d'une connexion réussie. Si une session utilisateur reste active ou inactive pendant exactement 30 minutes, le jeton d'authentification expire, mettant fin à la session et renvoyant l'utilisateur vers l'écran de connexion.
+	\end{description}
+	
+	\subsection{Module 4 : Registre de Traitement des Transactions}
+	\begin{description}
+		\item[Fonctionnalité 8 : Dépôts \& Retraits Internes en Libre-Service] ~\\
+		Fournit la passerelle financière centrale entre les actifs multi-registres d'un utilisateur :
+		\begin{itemize}
+			\item \textbf{Auto-Dépôt :} Transfère de l'argent du Portefeuille Local lié au téléphone de l'utilisateur pour le placer directement sur son compte au sein de la banque active dans le contexte actuel.
+			\item \textbf{Auto-Retrait :} Déduit des fonds du solde de son compte bancaire actif et les reverse instantanément dans son pool d'actifs du Portefeuille Local lié au téléphone.
+		\end{itemize}
+		
+		\item[Fonctionnalité 9 : Transferts de Pair à Pair avec Tarification des Frais en Pourcentage] ~\\
+		Achemine les capitaux de manière sécurisée depuis le compte bancaire actif de l'expéditeur directement vers le compte bancaire d'un autre utilisateur partout dans le réseau, en utilisant le Matricule du destinataire. Les frais sont calculés dynamiquement en fonction du chemin de routage :
+		\begin{itemize}
+			\item \textbf{Frais Intra-Bancaires (0,5 \%) :} Appliqués si les deux comptes résident au sein de la même entité bancaire.
+			\item \textbf{Frais Inter-Bancaires (1,5 \%) :} Appliqués si la transaction s'effectue entre des entités bancaires distinctes.
+		\end{itemize}
+	\end{description}
+	
+	\subsection{Module 5 : Audit du Système \& Résilience des Transactions}
+	\begin{description}
+		\item[Fonctionnalité 10 : Contrainte de Protection ACID « Tout ou Rien »] ~\\
+		Garantit la sécurité absolue des transactions. Toutes les étapes d'un dépôt, d'un retrait ou d'un transfert sont regroupées en une unité de travail indivisible. Si une étape échoue (par exemple, une perte de connexion ou des fonds insuffisants), l'opération entière est annulée instantanément, inversant tous les changements afin que les soldes restent complètement inchangés.
+		
+		\item[Fonctionnalité 11 : Historiques des Transactions \& Flux en Direct des 4 Dernières Opérations] ~\\
+		Enregistre un reçu inaltérable pour toutes les tentatives de transaction (détaillant le Type, la Source, la Destination, le Montant Principal, les Frais Calculés, la Date, et le statut Réussi ou Échoué). Le tableau de bord de la page d'accueil du client interroge ce registre pour afficher les **4 dernières transactions** de l'utilisateur sous forme d'un résumé d'activité interactif.
+	\end{description}
+	
+\end{document}

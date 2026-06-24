@@ -1,0 +1,10 @@
+\babel@toc {french}{}\relax 
+\contentsline {section}{\numberline {1}Présentation du Projet et Architecture Générale}{2}{section.1}%
+\contentsline {section}{\numberline {2}Contrôle d'Accès Basé sur les Rôles (RBAC)}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Matrice des Permissions du Système}{2}{subsection.2.1}%
+\contentsline {section}{\numberline {3}Fonctionnalités Détaillées du Système}{3}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Module 1 : Gestion des Banques et des Profils (Structure CRUD)}{3}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Module 2 : Infrastructure du Portefeuille Numérique}{3}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Module 3 : Sécurité, Sessions et Passerelles}{3}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Module 4 : Registre de Traitement des Transactions}{4}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Module 5 : Audit du Système et Résilience des Transactions}{4}{subsection.3.5}%
