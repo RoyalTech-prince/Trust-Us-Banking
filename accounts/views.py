@@ -160,8 +160,12 @@ class MultiBankLoginView(APIView):
 # =====================================================================
 # ─── 2. UNIVERSAL USER CRUD ENDPOINTS (Module 1 - CRUD Users) ───
 # =====================================================================
+@extend_schema(
+    summary="Enregistrement d'utilisateur universel",
+    description="Crée un profil utilisateur universel, ouvre une ligne de compte et crédite immédiatement le portefeuille local de 100 000 FCFA."
+)
 class UniversalRegistrationView(generics.CreateAPIView):
-    """Feature 2: Registers user profile, grants account ledger row, and credits local wallet with 100,000 FCFA."""
+    """Enregistre un profil utilisateur universel, accorde une ligne de grand livre de compte et crédite le portefeuille local de 100 000 FCFA."""
     serializer_class = UniversalRegistrationSerializer
 
     def create(self, request, *args, **kwargs):
@@ -175,14 +179,22 @@ class UniversalRegistrationView(generics.CreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    summary="Liste des utilisateurs universels",
+    description="Retourne la liste de tous les profils utilisateurs enregistrés dans le réseau bancaire commun."
+)
 class BankUserListView(generics.ListAPIView):
-    """Lists all registered universal profiles across the clearing network."""
+    """Retourne la liste de tous les profils utilisateurs enregistrés dans le réseau bancaire."""
     queryset = BankUser.objects.all()
     serializer_class = BankUserSerializer
 
 
+@extend_schema(
+    summary="Détails d'un utilisateur",
+    description="Récupère, met à jour ou supprime les informations d'un utilisateur identifié par son matricule universel."
+)
 class BankUserDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """Manages individual user information records using their matricule sequence string."""
+    """Gère les informations d'un utilisateur individuel par son matricule."""
     queryset = BankUser.objects.all()
     serializer_class = BankUserSerializer
     lookup_field = 'matricule'
@@ -191,8 +203,12 @@ class BankUserDetailView(generics.RetrieveUpdateDestroyAPIView):
 # =====================================================================
 # ─── 3. MULTI-BANK ENROLLMENT ENDPOINT (Feature 10) ───
 # =====================================================================
+@extend_schema(
+    summary="Inscription multi-banque",
+    description="Permet à un titulaire de matricule existant d'ouvrir un compte dans une nouvelle banque commerciale et de créer le nœud de grand livre correspondant."
+)
 class BankEnrollmentView(APIView):
-    """Enables an existing matricule entity to spin up an account ledger node at a secondary commercial bank."""
+    """Permet à un titulaire de matricule existant d'ouvrir un compte dans une nouvelle banque commerciale."""
     @extend_schema(request=BankEnrollmentSerializer)
     def post(self, request):
         serializer = BankEnrollmentSerializer(data=request.data)
@@ -208,8 +224,12 @@ class BankEnrollmentView(APIView):
 # =====================================================================
 # ─── 4. ADMINISTRATIVE UNBLOCK OVERRIDE ENDPOINT (Feature 6) ───
 # =====================================================================
+@extend_schema(
+    summary="Déblocage administratif d'un utilisateur",
+    description="Permet à un administrateur de réactiver un profil utilisateur bloqué et de réinitialiser ses tentatives de connexion échouées."
+)
 class AdminUnblockUserView(APIView):
-    """Administrative override tool to restore BLOCKED customer profiles back to ACTIVE state."""
+    """Outil d'administration pour restaurer des profils BLOQUÉS à l'état ACTIF."""
     def post(self, request, matricule):
         try:
             target_user = BankUser.objects.get(matricule=matricule)
@@ -232,8 +252,12 @@ class AdminUnblockUserView(APIView):
 # =====================================================================
 # ─── 5. FINANCIAL TRANSACTIONS ENGINE (Modules 4 & 5) ───
 # =====================================================================
+@extend_schema(
+    summary="Effectuer un virement",
+    description="Exécute un virement financier entre comptes avec traitement atomique des soldes et application des frais de routage."
+)
 class TransferCreateView(APIView):
-    """Executes a financial transfer processing atomic balances and charging system routing fees."""
+    """Exécute un virement financier avec mise à jour atomique des soldes et frais de transaction."""
     def post(self, request):
         session = verify_web_session(request)
         if isinstance(session, str):
@@ -255,8 +279,12 @@ class TransferCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    summary="Effectuer un retrait",
+    description="Traite un retrait d'argent depuis un compte courant et applique un frais fixe de 50 FCFA."
+)
 class WithdrawalCreateView(APIView):
-    """Processes a structural checking account cash-out extraction charging a flat 50.00 FCFA fee."""
+    """Traite un retrait de compte courant et facture un frais fixe de 50 FCFA."""
     def post(self, request):
         session = verify_web_session(request)
         if isinstance(session, str):
@@ -281,8 +309,12 @@ class WithdrawalCreateView(APIView):
 # =====================================================================
 # ─── 6. INFORMATION SEARCH & HISTORY VIEWS ───
 # =====================================================================
+@extend_schema(
+    summary="Détails du compte",
+    description="Renvoie les informations détaillées de solde et de profil pour un compte bancaire identifié par son UUID."
+)
 class AccountDetailView(APIView):
-    """Returns granular tracking balances and profile parameters for a specific ledger account ID."""
+    """Renvoie les informations détaillées de solde et de profil pour un compte bancaire."""
     def get(self, request, account_id):
         session = verify_web_session(request)
         if isinstance(session, str):
@@ -297,8 +329,12 @@ class AccountDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    summary="Comptes d'un utilisateur",
+    description="Récupère tous les comptes bancaires reliés au matricule d'un client au sein du réseau multi-banque."
+)
 class UserAccountsListView(APIView):
-    """Retrieves all decentralized bank account nodes connected to a client's Matricule code."""
+    """Récupère tous les comptes bancaires reliés au matricule d'un client."""
     def get(self, request, matricule):
         session = verify_web_session(request)
         if isinstance(session, str):

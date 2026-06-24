@@ -10,4 +10,4 @@ NewUser logic
 BankCodes:
 - Afriland First Bank : AFB
 - Union Bank Of Cameroon: UBC
-- Ecobank: Ecobank
+- Ecobank: ECB
