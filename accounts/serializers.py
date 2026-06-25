@@ -82,7 +82,6 @@ class UniversalRegistrationSerializer(serializers.ModelSerializer):
                 f"Pour vous connecter à votre espace, utilisez votre matricule et votre mot de passe "
                 f"commençant par le préfixe de votre banque (Ex: {target_bank.code}_...).\n\n"
                 f"Merci de faire confiance à notre réseau décentralisé.\n"
-                f"L'Équipe Technique Core Engine"
             )
             send_mail(
                 subject=email_subject,
@@ -158,7 +157,6 @@ class BankEnrollmentSerializer(serializers.Serializer):
                 f"▪️ Identifiant Unique du Compte : {account.account_id}\n\n"
                 f"Pour gérer ce nouvel espace de travail, connectez-vous en utilisant le préfixe dédié : {bank.code}_...\n\n"
                 f"Cordialement,\n"
-                f"Le Réseau Interbancaire Central Clearing"
             )
             send_mail(
                 subject=email_subject,
