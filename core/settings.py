@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'drf_spectacular',
+    'anymail',  # Added for API-based outbound email routing
     'accounts',
 ]
 
@@ -110,14 +111,13 @@ CORS_ALLOWED_ORIGINS = [
     "https://trust-us-banking.onrender.com",
 ]
 
-# --- Secure Operational Email Configuration ---
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
+# --- Production Grade HTTP API Email Configuration ---
+# Bypasses cloud outbound port restrictions by sending mail over secure HTTPS (Port 443)
+EMAIL_BACKEND = "anymail.backends.brevo.EmailBackend"
 
-# Reads production environment tokens from Render, defaults securely to local dev variables
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'ketu.kedju@facsciences-uy1.cm') 
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'mmoe zxgm zhwo klst')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', f"Trust-Us Banking <{EMAIL_HOST_USER}>")
+ANYMAIL = {
+    "BREVO_API_KEY": os.environ.get("BREVO_API_KEY", "your-local-fallback-brevo-api-key"),
+}
+
+# The universal public email signature for your multi-bank system
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Trust-Us Banking <ketu.kedju@facsciences-uy1.cm>")
