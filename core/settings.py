@@ -110,12 +110,14 @@ CORS_ALLOWED_ORIGINS = [
     "https://trust-us-banking.onrender.com",
 ]
 
-# Email Configuration
+# --- Secure Operational Email Configuration ---
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 465
 EMAIL_USE_TLS = False
 EMAIL_USE_SSL = True
-EMAIL_HOST_USER = 'ketu.kedju@facsciences-uy1.cm' 
-EMAIL_HOST_PASSWORD = 'mmoe zxgm zhwo klst'
-DEFAULT_FROM_EMAIL = f"Trust-Us Banking <{EMAIL_HOST_USER}>"
+
+# Reads production environment tokens from Render, defaults securely to local dev variables
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'ketu.kedju@facsciences-uy1.cm') 
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'mmoe zxgm zhwo klst')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', f"Trust-Us Banking <{EMAIL_HOST_USER}>")

@@ -8,8 +8,8 @@ from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password as django_check_password
 
 class Bank(models.Model):
-    name = models.CharField(max_length=100, unique=True) # UBC, AfrilandFirst, Ecobank
-    code = models.CharField(max_length=10, unique=True) # e.g., UBC, AFB, ECO
+    name = models.CharField(max_length=100, unique=True) # UBC, AfrilandFirst, Ecobank, Hub Mobile Money
+    code = models.CharField(max_length=10, unique=True) # e.g., UBC, AFB, ECO, MOMO
 
     def __str__(self):
         return f"{self.name} ({self.code})"
@@ -49,6 +49,7 @@ class BankUser(models.Model):
         return django_check_password(raw_password, self.password)
 
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
         if not self.matricule:
             year = datetime.now().year
             prefix = f"RT{year}"
@@ -64,6 +65,22 @@ class BankUser(models.Model):
             self.matricule = f"{prefix}{new_number}"
             
         super().save(*args, **kwargs)
+
+        # ─── CRITICAL AUTOMATION: AUTO-CREATE CENTRAL MOMO WALLET ───
+        # Dès qu'un utilisateur est créé, on lui ouvre automatiquement son compte MoMo central
+        if is_new:
+            momo_bank, _ = Bank.objects.get_or_create(
+                code='MOMO',
+                defaults={'name': 'Hub Central Mobile Money'}
+            )
+            Account.objects.get_or_create(
+                owner=self,
+                bank=momo_bank,
+                defaults={
+                    'password': self.password,
+                    'balance': Decimal('10000.00') # Solde test initial sur le MoMo
+                }
+            )
 
     def __str__(self):
         return f"{self.full_name} - {self.matricule} ({self.get_user_type_display()})"
@@ -81,13 +98,14 @@ class Account(models.Model):
         unique_together = ('owner', 'bank')
 
     def __str__(self):
-        return f"{self.bank.name} Account: {self.owner.matricule} (Bal: {self.balance})"
+        return f"Compte {self.bank.code}: {self.owner.matricule} (Solde: {self.balance} FCFA)"
 
 
 class Transaction(models.Model):
     transaction_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     amount         = models.DecimalField(max_digits=12, decimal_places=2)
     timestamp      = models.DateTimeField(auto_now_add=True)
+    description    = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         abstract = True
@@ -101,10 +119,13 @@ class Transfer(Transaction):
     def save(self, *args, **kwargs):
         is_new = self.pk is None
         if is_new:
-            # Set structural fees based on clearing router distance
+            # Calcul des frais de compensation interbancaire
             self.fee = Decimal('10.00') if self.sender.bank == self.receiver.bank else Decimal('50.00')
             
-            # ─── FIX: EXECUTE AND VALIDATE BALANCES BEFORE COMMITTING TRANSFER RECORD ───
+            if not self.description:
+                self.description = f"Virement interbancaire vers {self.receiver.owner.full_name}"
+            
+            # Exécution de la transaction atomique
             self.execute() 
             
         super().save(*args, **kwargs)
@@ -123,23 +144,81 @@ class Transfer(Transaction):
             sender_acc.save()
             receiver_acc.save()
 
+    def __str__(self):
+        return f"Virement de {self.amount} FCFA - {self.sender.owner.matricule} vers {self.receiver.owner.matricule}"
+
 
 class Withdrawal(Transaction):
+    """
+    RETRAIT DU COMPTE BANCAIRE VERS LE COMPTE MOMO
+    Déduit l'argent du compte bancaire commercial sélectionné (ex: UBC) 
+    et l'ajoute directement sur le portefeuille central Mobile Money de l'utilisateur.
+    """
     account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='withdrawals')
     fee     = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('50.00'))
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
         if is_new:
-            # ─── FIX: EXECUTE AND VALIDATE BALANCES BEFORE COMMITTING WITHDRAWAL RECORD ───
+            if not self.description:
+                self.description = f"Retrait depuis le compte {self.account.bank.code} vers le compte Mobile Money"
             self.execute()
         super().save(*args, **kwargs)
 
     def execute(self):
         with transaction.atomic():
-            acc = Account.objects.select_for_update().get(pk=self.account.pk)
+            bank_acc = Account.objects.select_for_update().get(pk=self.account.pk)
             total = self.amount + self.fee
-            if acc.balance < total:
-                raise ValueError("Solde insuffisant pour effectuer ce retrait.")
-            acc.balance -= total
-            acc.save()
+            
+            if bank_acc.balance < total:
+                raise ValueError("Solde insuffisant sur votre compte bancaire pour alimenter votre compte Mobile Money.")
+            
+            # Récupération sécurisée du portefeuille MoMo central de l'utilisateur
+            momo_acc = Account.objects.select_for_update().get(owner=bank_acc.owner, bank__code='MOMO')
+            
+            # Mouvement des fonds
+            bank_acc.balance -= total
+            momo_acc.balance += self.amount
+            
+            bank_acc.save()
+            momo_acc.save()
+
+    def __str__(self):
+        return f"Retrait de {self.amount} FCFA sur le compte {self.account.bank.code}"
+
+
+class Deposit(Transaction):
+    """
+    DÉPÔT DEPUIS LE COMPTE MOMO VERS UN COMPTE BANCAIRE
+    Prend l'argent présent sur le portefeuille central Mobile Money (MOMO)
+    et l'injecte dans le compte de la banque commerciale sélectionnée.
+    """
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='deposits')
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if is_new:
+            if not self.description:
+                self.description = f"Dépôt par Mobile Money sur le compte {self.account.bank.code}"
+            self.execute()
+        super().save(*args, **kwargs)
+
+    def execute(self):
+        with transaction.atomic():
+            bank_acc = Account.objects.select_for_update().get(pk=self.account.pk)
+            
+            # Récupération sécurisée du portefeuille MoMo central source
+            momo_acc = Account.objects.select_for_update().get(owner=bank_acc.owner, bank__code='MOMO')
+            
+            if momo_acc.balance < self.amount:
+                raise ValueError("Solde Mobile Money insuffisant pour effectuer ce dépôt bancaire.")
+            
+            # Mouvement des fonds
+            momo_acc.balance -= self.amount
+            bank_acc.balance += self.amount
+            
+            momo_acc.save()
+            bank_acc.save()
+
+    def __str__(self):
+        return f"Dépôt de {self.amount} FCFA sur le compte {self.account.bank.code}"

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import BankUser, Account, Bank, Transfer, Withdrawal
+from .models import BankUser, Account, Bank, Transfer, Withdrawal, Deposit
 
 # ─── 1. CORE MODELS SERIALIZERS ───
 
@@ -52,7 +52,7 @@ class UniversalRegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop('bank_code')
         raw_password = validated_data.pop('password')
 
-        # 1. Create the Global Core Identity profile
+        # 1. Create the Global Core Identity profile (Automated MoMo initialization triggers inside model save)
         user = BankUser(
             full_name=validated_data['full_name'],
             email=validated_data['email'],
@@ -62,7 +62,7 @@ class UniversalRegistrationSerializer(serializers.ModelSerializer):
         user.set_password(raw_password)
         user.save() 
 
-        # 2. CREATE THE FIRST LEDGER CHECKING ACCOUNT ROW
+        # 2. CREATE THE FIRST COMMERCIAL LEDGER CHECKING ACCOUNT ROW
         new_account = Account.objects.create(
             owner=user,
             bank=target_bank,
@@ -79,6 +79,7 @@ class UniversalRegistrationSerializer(serializers.ModelSerializer):
                 f"▪️ Matricule Unique : {user.matricule}\n"
                 f"▪️ Banque Principale : {target_bank.name} ({target_bank.code})\n"
                 f"▪️ Numéro de Compte : {new_account.account_id}\n\n"
+                f"Votre portefeuille d'échange central Mobile Money (MOMO) a également été créé automatiquement et crédité d'un solde de test.\n\n"
                 f"Pour vous connecter à votre espace, utilisez votre matricule et votre mot de passe "
                 f"commençant par le préfixe de votre banque (Ex: {target_bank.code}_...).\n\n"
                 f"Merci de faire confiance à notre réseau décentralisé.\n"
@@ -88,10 +89,9 @@ class UniversalRegistrationSerializer(serializers.ModelSerializer):
                 message=email_body,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
-                fail_silently=False  # Changed to False so you can see errors in terminal logs
+                fail_silently=False
             )
         except Exception as e:
-            # Print the actual mail exception to the terminal for debugging
             print(f"❌ SMTP Error encountered: {str(e)}")
             pass 
 
@@ -103,7 +103,6 @@ class BankEnrollmentSerializer(serializers.Serializer):
     bank_code = serializers.CharField()
     password = serializers.CharField(write_only=True, style={'input_type': 'password'})
     
-    # Read-only fields to send a beautiful confirmation payload back to Swagger
     account_id = serializers.CharField(read_only=True)
     full_name = serializers.CharField(read_only=True)
 
@@ -138,14 +137,12 @@ class BankEnrollmentSerializer(serializers.Serializer):
         user = validated_data['user_object']
         bank = validated_data['bank_object']
 
-        # 1. Instantiate secondary branch ledger account
         account = Account.objects.create(
             owner=user,
             bank=bank,
-            password=user.password  # Synchronizes credentials safely
+            password=user.password
         )
 
-        # 2. SEND ONBOARDING EMAIL NOTIFICATION
         try:
             email_subject = f"Ouverture de Compte Confirmée - {bank.code}"
             email_body = (
@@ -163,27 +160,26 @@ class BankEnrollmentSerializer(serializers.Serializer):
                 message=email_body,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
-                fail_silently=False  # Keep false to catch production SMTP issues
+                fail_silently=False
             )
         except Exception as e:
             print(f"❌ Enrollment SMTP Error: {str(e)}")
             pass
 
-        # 3. FIX: Dynamically attach target response attributes to the returning user context
         user.account_id = account.account_id
         return user
+
 
 class MultiBankLoginRequestSerializer(serializers.Serializer):
     identifier = serializers.CharField(
         required=True,
-        help_text="Votre adresse email ou Matricule Unique (Ex: MAT-12345678)"
+        help_text="Votre adresse email ou Matricule Unique (Ex: RT20260001)"
     )
     password = serializers.CharField(
         required=True,
         style={'input_type': 'password'},
-        help_text="Mot de passe préfixé par le code de la banque (Ex: UBC_monMotDePasse)"
+        help_text="Mot de passe préfixé par le code de la banque (Ex: UBC_monMotDePasse ou MOMO_monMotDePasse)"
     )
-
 
 
 # ─── 3. TRANSACTION DATA LINKERS ───
@@ -197,6 +193,7 @@ class AccountInfoSerializer(serializers.ModelSerializer):
         model = Account
         fields = ['account_id', 'owner_name', 'bank_name', 'bank_code']
 
+
 class TransferSerializer(serializers.ModelSerializer):
     sender_account_id = serializers.UUIDField(write_only=True)
     receiver_matricule = serializers.CharField(write_only=True)
@@ -208,29 +205,30 @@ class TransferSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transfer
         fields = [
-            'transaction_id', 'amount', 'fee', 'timestamp', 
+            'transaction_id', 'amount', 'fee', 'timestamp', 'description',
             'sender_account_id', 'receiver_matricule', 'receiver_bank_code',
             'sender_details', 'receiver_details'
         ]
         read_only_fields = ['transaction_id', 'timestamp', 'fee', 'sender_details', 'receiver_details']
     
     def create(self, validated_data):
-        # FIX: Pop fields correctly before building the initialization payload
         sender_id = validated_data.pop('sender_account_id')
         rec_mat = validated_data.pop('receiver_matricule')
         rec_code = validated_data.pop('receiver_bank_code')
         amount = validated_data.get('amount')
+        description = validated_data.get('description', None)
 
         try:
             sender_acc = Account.objects.get(account_id=sender_id)
             receiver_acc = Account.objects.get(owner__matricule=rec_mat, bank__code=rec_code)
         except Account.DoesNotExist:
-            raise serializers.ValidationError("Compte cible introuvable au sein du réseau interbancaire.")
+            raise serializers.ValidationError("Compte émetteur ou bénéficiaire introuvable au sein du réseau interbancaire.")
         
         transfer = Transfer(
             sender=sender_acc,
             receiver=receiver_acc,
-            amount=amount
+            amount=amount,
+            description=description
         )
         
         try:
@@ -239,31 +237,72 @@ class TransferSerializer(serializers.ModelSerializer):
         except ValueError as e:
             raise serializers.ValidationError(str(e))
 
+
 class WithdrawalSerializer(serializers.ModelSerializer):
-    account_id = serializers.UUIDField(write_only=True)
+    """
+    Serializer pour alimenter son compte Mobile Money depuis son compte bancaire commercial (Retrait).
+    """
+    account_id = serializers.UUIDField(write_only=True, help_text="ID du compte bancaire commercial à débiter.")
     
     class Meta:
         model = Withdrawal
-        fields = ['transaction_id', 'amount', 'fee', 'timestamp', 'account_id']
+        fields = ['transaction_id', 'amount', 'fee', 'timestamp', 'description', 'account_id']
         read_only_fields = ['transaction_id', 'timestamp', 'fee']
     
     def create(self, validated_data):
-        # FIX: Pop account parameter cleanly
         acc_id = validated_data.pop('account_id')
         amount = validated_data.get('amount')
+        description = validated_data.get('description', None)
 
         try:
             account = Account.objects.get(account_id=acc_id)
         except Account.DoesNotExist:
-            raise serializers.ValidationError("Compte introuvable.")
+            raise serializers.ValidationError("Compte bancaire spécifié introuvable.")
         
-        withdrawal = Withdrawal(account=account, amount=amount)
+        if account.bank.code == 'MOMO':
+            raise serializers.ValidationError("Opération invalide : Vous ne pouvez pas effectuer un retrait bancaire directement depuis le hub Mobile Money.")
+
+        withdrawal = Withdrawal(account=account, amount=amount, description=description)
         
         try:
             withdrawal.save()
             return withdrawal
         except ValueError as e:
             raise serializers.ValidationError(str(e))
+
+
+class DepositSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour envoyer des fonds depuis son compte Mobile Money vers son compte bancaire commercial (Dépôt).
+    """
+    account_id = serializers.UUIDField(write_only=True, help_text="ID du compte bancaire commercial cible à créditer.")
+
+    class Meta:
+        model = Deposit
+        fields = ['transaction_id', 'amount', 'timestamp', 'description', 'account_id']
+        read_only_fields = ['transaction_id', 'timestamp']
+
+    def create(self, validated_data):
+        acc_id = validated_data.pop('account_id')
+        amount = validated_data.get('amount')
+        description = validated_data.get('description', None)
+
+        try:
+            account = Account.objects.get(account_id=acc_id)
+        except Account.DoesNotExist:
+            raise serializers.ValidationError("Compte bancaire de destination introuvable.")
+
+        if account.bank.code == 'MOMO':
+            raise serializers.ValidationError("Opération invalide : Pour recharger votre solde Mobile Money, effectuez un Retrait depuis une banque commerciale.")
+
+        deposit = Deposit(account=account, amount=amount, description=description)
+
+        try:
+            deposit.save()
+            return deposit
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
+
 
 class AccountBalanceSerializer(serializers.ModelSerializer):
     bank_name = serializers.CharField(source='bank.name', read_only=True)
@@ -273,6 +312,7 @@ class AccountBalanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         fields = ['account_id', 'owner_name', 'matricule', 'bank_name', 'balance', 'created_at']
+
 
 class BankUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -286,3 +326,14 @@ class BankUserSerializer(serializers.ModelSerializer):
         instance.full_name = validated_data.get('full_name', instance.full_name)
         instance.save()
         return instance
+
+
+class TransactionHistoryResponseSerializer(serializers.Serializer):
+    id_transaction = serializers.UUIDField(source='transaction_id')
+    type_transaction = serializers.CharField()
+    matricule_utilisateur = serializers.CharField()
+    numero_compte = serializers.UUIDField()
+    montant = serializers.DecimalField(max_digits=12, decimal_places=2)
+    frais = serializers.DecimalField(max_digits=10, decimal_places=2)
+    details = serializers.CharField(source='description')
+    date_creation = serializers.DateTimeField(source='timestamp')

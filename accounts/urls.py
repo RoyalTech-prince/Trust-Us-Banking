@@ -1,6 +1,9 @@
 from django.urls import path
 from .views import (
+    LocalAccountBalanceView,
     MultiBankLoginView,
+    TraceTransactionHistoryView,
+    TransactionHistoryView,
     UniversalRegistrationView,
     BankEnrollmentView,
     BankUserListView,
@@ -8,6 +11,7 @@ from .views import (
     AdminUnblockUserView,  # Added for Feature 6 administrative override
     TransferCreateView,
     WithdrawalCreateView,
+    DepositCreateView,     # 👈 Ajout du controlleur pour les dépôts MoMo
     AccountDetailView,
     UserAccountsListView
 )
@@ -28,8 +32,14 @@ urlpatterns = [
     # --- Transactions (Modules 4 & 5 - Member 4 & Yourself) ---
     path('transactions/transfer/', TransferCreateView.as_view(), name='transfer_create'),
     path('transactions/withdraw/', WithdrawalCreateView.as_view(), name='withdraw_create'),
+    path('transactions/deposit/', DepositCreateView.as_view(), name='deposit_create'), # 👈 Nouvelle route pour alimenter une banque via MoMo
 
     # --- Information & Discovery ---
     path('accounts/<uuid:account_id>/', AccountDetailView.as_view(), name='account_detail'),
     path('accounts/user/<str:matricule>/', UserAccountsListView.as_view(), name='user_accounts_list'),
+    path('accounts/balance/local/<str:matricule>/', LocalAccountBalanceView.as_view(), name='local_account_balance'),
+
+    # ---- Transaction History & Traceability (Module 5 - Yourself) ---
+    path('account/history/', TransactionHistoryView.as_view(), name='transaction-history'),
+    path('account/history/trace/<str:matricule>/', TraceTransactionHistoryView.as_view(), name='trace-history-by-matricule'),
 ]
