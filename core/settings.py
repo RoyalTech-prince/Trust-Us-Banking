@@ -113,9 +113,9 @@ CORS_ALLOWED_ORIGINS = [
 # --- Secure Operational Email Configuration ---
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 465
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = True
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
 
 # Reads production environment tokens from Render, defaults securely to local dev variables
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'ketu.kedju@facsciences-uy1.cm') 
